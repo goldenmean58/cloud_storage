@@ -11,6 +11,7 @@ def login_view(request):
     username = request.POST['username']
     password = request.POST['password']
     user = authenticate(request, username=username, password=password)
+    os.mkdir('./storage/')
     if user is not None:
         login(request, user)
         return redirect('/files/')
@@ -25,6 +26,7 @@ def register_view(request):
         print(username, password)
         user = User.objects.create_user(username=username, password=password)
         user.save()
+        os.mkdir('./storage/')
         os.mkdir('./storage/' + username)
     return redirect('/user/login')
 
