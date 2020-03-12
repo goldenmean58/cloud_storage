@@ -13,6 +13,7 @@ def login_view(request):
     user = authenticate(request, username=username, password=password)
     os.mkdir('./storage/')
     if user is not None:
+        os.mkdir('./storage/' + username)
         login(request, user)
         return redirect('/files/')
     return redirect('/user/login')
