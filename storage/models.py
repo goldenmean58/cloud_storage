@@ -26,5 +26,5 @@ class DownloadLink(models.Model):
     blake2 = models.CharField(max_length=32)
     link = models.CharField(max_length=256)
     create_time = models.DateTimeField(auto_now=True)
-    invalid_time = models.DateTimeField()
+    file_name = models.CharField(max_length=256)
 
