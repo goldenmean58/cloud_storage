@@ -11,7 +11,7 @@ class File(models.Model):
     user_name = models.CharField(max_length=256)
     md5 = models.CharField(max_length=32, null=True, blank=True)
     blake2 = models.CharField(max_length=32, null=True, blank=True)
-    parent_id = models.CharField(max_length=1024)
+    parent_id = models.IntegerField()
     is_shared = models.BooleanField()
     shared_key = models.CharField(max_length=4, blank=True, null=True)
     shared_expire_time = models.DateTimeField(auto_now_add=True)
@@ -25,3 +25,7 @@ class DownloadLink(models.Model):
     create_time = models.DateTimeField(auto_now=True)
     file_name = models.CharField(max_length=256)
 
+class RawFile(models.Model):
+    md5 = models.CharField(max_length=32)
+    blake2 = models.CharField(max_length=32)
+    count = models.IntegerField()

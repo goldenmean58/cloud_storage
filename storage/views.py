@@ -6,10 +6,11 @@ from django.views.decorators.csrf import csrf_exempt
 from time import time
 import hashlib
 import os
-from .models import File, DownloadLink
+from .models import File, DownloadLink, RawFile
 from django.core.files import File as DownloadFile
 from django.utils import timezone
 import datetime
+from django.db.models import F
 
 def create_dir(user_name, current_dir, dir_name):
     if current_dir != "":
@@ -29,7 +30,7 @@ def create_dir(user_name, current_dir, dir_name):
     if not new_dir:
         new_dir = File(dir_name=real_name, user_name=user_name, parent_id=parent_id, is_shared=False, is_dir=True, file_name=dir_name)
         new_dir.save()
-    return True
+    return real_name
 
 # Create your views here.
 @csrf_exempt
@@ -59,8 +60,9 @@ def upload_view(request):
     blake2s  = blake2s.hexdigest()
     real_name = 'files/' + md5 + blake2s
     os.rename(tmp_real_name, real_name)
-    file = File(file_name=file_name, file_size=file_size, md5=md5, blake2=blake2s, parent_id=parent_id, is_shared=False, shared_key='', user_name=request.user, is_dir=False, dir_name=current_dir + ("/" if current_dir != "/" else "") + file_name)
-    file.save()
+    has_file = File.objects.filter(user_name=request.user, file_name=file_name, parent_id=parent_id)
+    suffix = "" if not has_file else "_" + str(timezone.now())
+    add_file_record(str(request.user), file_name + suffix, file_size, md5, blake2s, parent_id, current_dir)
     return JsonResponse({"code": 0, "msg": "Upload successfully"})
 
 def view(user, dir_name):
@@ -162,11 +164,90 @@ def download_view(request, link):
 
 @csrf_exempt
 def move_view(request):
-    pass
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+    if not request.user.is_authenticated:
+        return JsonResponse({'code': 20000, 'msg': "Not authenticated user"})
+    os.makedirs('files', exist_ok=True)
+    user = str(request.user)
+    create_dir(request.user, "", '')
+    src_path = request.POST.get("src_path", None)
+    dest_path = request.POST.get("dest_path", None)
+    if not src_path or not dest_path:
+        return JsonResponse({'code': 30000, 'msg': 'Missing Parameters'})
+    src_file = File.objects.filter(user_name=request.user, dir_name=src_path)
+    if not src_file:
+        return JsonResponse({'code': 30000, 'msg': 'No such a file'})
+    dir_name = dest_path[:dest_path.rfind('/')]
+    dir_name = "/" if dir_name == "" else dir_name
+    base_name = dest_path[dest_path.rfind('/')+1:]
+    parent = File.objects.filter(user_name=user, dir_name=dir_name)
+    if not parent:
+        return False
+    parent = parent.first()
+    parent_id = parent.id
+    has_file = File.objects.filter(user_name=user, file_name=base_name, parent_id=parent_id)
+    suffix = "" if not has_file else "_" + str(timezone.now())
+    src_file.update(dir_name=dest_path, file_name=base_name + suffix, parent_id=parent_id)
+    return JsonResponse({'code': 0, 'msg': 'Move successfully'})
+
+def add_file_record(user, file_name, file_size, md5, blake2s, parent_id, current_dir):
+    file = File(file_name=file_name, file_size=file_size, md5=md5, blake2=blake2s, parent_id=parent_id, is_shared=False, shared_key='', user_name=user, is_dir=False, dir_name=current_dir + ("/" if current_dir != "/" else "") + file_name)
+    file.save()
+    raw_file = RawFile.objects.filter(md5=md5, blake2=blake2s)
+    if not raw_file:
+        raw_file = RawFile(md5=md5, blake2=blake2s, count=1)
+        raw_file.save()
+        return
+    raw_file.update(count=F('count') + 1)
+    
+
+def copy(dest_user, src_user, dest, src):
+    src_file = File.objects.filter(user_name=src_user, dir_name=src)
+    if not src_file:
+        return False
+    dir_name = dest[:dest.rfind('/')]
+    dir_name = "/" if dir_name == "" else dir_name
+    base_name = dest[dest.rfind('/')+1:]
+    parent = File.objects.filter(user_name=src_user, dir_name=dir_name)
+    if not parent:
+        return False
+    parent = parent.first()
+    src_file = src_file.first()
+    file_name = src_file.file_name
+    file_size = src_file.file_size
+    md5 = src_file.md5
+    blake2 = src_file.blake2
+    has_file = File.objects.filter(user_name=dest_user, parent_id=parent.id, file_name=src_file.file_name)
+    suffix = "" if not has_file else "_" + str(timezone.now())
+    if not src_file.is_dir:
+        add_file_record(dest_user, base_name + suffix, file_size, md5, blake2, parent.id, dir_name)
+        return True
+    created_dir_name = create_dir(dest_user, parent.dir_name, src_file.file_name + suffix)
+    files_inside = File.objects.filter(user_name=src_user, parent_id=src_file.id)
+    for file in files_inside:
+        if not copy(dest_user, src_user, created_dir_name + "/" + file.file_name, file.dir_name):
+            return False
+    return True
+
 
 @csrf_exempt
 def copy_view(request):
-    pass
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+    if not request.user.is_authenticated:
+        return JsonResponse({'code': 20000, 'msg': "Not authenticated user"})
+    os.makedirs('files', exist_ok=True)
+    user = str(request.user)
+    create_dir(request.user, "", '')
+    src_path = request.POST.get("src_path", None)
+    dest_path = request.POST.get("dest_path", None)
+    if not src_path or not dest_path:
+        return JsonResponse({'code': 30000, 'msg': 'Missing Parameters'})
+    if not copy(user, user, dest_path, src_path):
+        return JsonResponse({'code': 40000, 'msg': 'Failed to copy'})
+    return JsonResponse({'code': 0, 'msg': 'Copy successfully'})
+
 
 def delete(username, parent_id, id_itself, is_dir):
     if not is_dir:
@@ -174,7 +255,14 @@ def delete(username, parent_id, id_itself, is_dir):
         if not is_file:
             return False
         delete_file = is_file.first()
-        os.remove('files/' + delete_file.md5 + delete_file.blake2)
+        raw_file = RawFile.objects.filter(md5=delete_file.md5, blake2=delete_file.blake2)
+        if not raw_file:
+            return False
+        if raw_file.first().count == 1:
+            os.remove('files/' + delete_file.md5 + delete_file.blake2)
+            raw_file.delete()
+        else:
+            raw_file.update(count=F('count') - 1)
         is_file.delete()
         return True
     is_dir = File.objects.filter(user_name=username, id=id_itself)
@@ -207,11 +295,10 @@ def delete_view(request):
     delete_file = File.objects.filter(user_name=request.user, parent_id=parent_id, file_name=file_name)
     parent_name = current_dir.first().dir_name
     parent_name = "" if parent_name == "/" else parent_name
-    delete_dir = File.objects.filter(user_name=request.user, parent_id=parent_id, dir_name=parent_name + "/" + file_name)
-    if not delete_file and not delete_dir:
+    if not delete_file:
         return JsonResponse({'code': 30001, 'msg': 'Cannot delete that file or directory'})
-    is_dir = not delete_file
-    delete_id = delete_dir.first().id if is_dir else delete_file.first().id
+    is_dir = delete_file.first().is_dir
+    delete_id = delete_file.first().id
     if not delete(request.user, parent_id, delete_id, is_dir):
         return JsonResponse({'code': 30001, 'msg': 'Cannot delete that file or directory'})
     return JsonResponse({"code": 0, "msg": "Delete successfully"})
