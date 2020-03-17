@@ -2,22 +2,19 @@ from django.db import models
 
 # Create your models here.
 
-class Dir(models.Model):
-    id = models.AutoField(primary_key=True)
-    dir_name = models.CharField(max_length=256)
-    user_name = models.CharField(max_length=256)
-    parent_id = models.IntegerField()
-
 class File(models.Model):
     id = models.AutoField(primary_key=True)
+    is_dir = models.BooleanField()
+    dir_name = models.CharField(max_length=256, null=True, blank=True)
     file_name = models.CharField(max_length=256)
-    file_size = models.BigIntegerField()
+    file_size = models.BigIntegerField(null=True, blank=True)
     user_name = models.CharField(max_length=256)
-    md5 = models.CharField(max_length=32)
-    blake2 = models.CharField(max_length=32)
+    md5 = models.CharField(max_length=32, null=True, blank=True)
+    blake2 = models.CharField(max_length=32, null=True, blank=True)
     parent_id = models.CharField(max_length=1024)
     is_shared = models.BooleanField()
-    shared_key = models.CharField(max_length=4, blank=True)
+    shared_key = models.CharField(max_length=4, blank=True, null=True)
+    shared_expire_time = models.DateTimeField(auto_now_add=True)
     upload_time = models.DateTimeField(auto_now_add=True)
 
 
