@@ -7,9 +7,6 @@ verify_ssl = true
 
 [packages]
 django = "~=3.0"
-djangorestframework = "*"
-markdown = "*"
-django-filter = "*"
 
 [requires]
 python_version = "3.6"
