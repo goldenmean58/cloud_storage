@@ -28,7 +28,9 @@ def register_view(request):
         password = request.POST.get('password', None)
         if not username or not password:
             return HttpResponseBadRequest()
-        print(username, password)
+        has_user = User.objects.filter(username=username)
+        if has_user:
+            return JsonResponse({"code": 30000 , "msg": "User has existen, failed to register "})
         user = User.objects.create_user(username=username, password=password)
         user.save()
     return JsonResponse({"code": 0 , "msg": "Register successfully"})
