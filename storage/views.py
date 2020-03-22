@@ -1,13 +1,12 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
-from django.http import HttpResponseRedirect, HttpResponseNotAllowed, HttpResponseBadRequest, JsonResponse, HttpResponseNotFound, HttpResponse
+from django.http import HttpResponseRedirect, HttpResponseNotAllowed, HttpResponseBadRequest, JsonResponse, HttpResponseNotFound, HttpResponse, FileResponse
 from django.views.decorators.csrf import csrf_exempt
 from time import time
 import hashlib
 import os
 from .models import File, DownloadLink, RawFile
-from django.core.files import File as DownloadFile
 from django.utils import timezone
 import datetime
 from django.db.models import F
@@ -157,9 +156,7 @@ def download_view(request, link):
     download_link = download_link.first()
     file_path = 'files/' + download_link.md5 + download_link.blake2
     f = open(file_path, 'rb')
-    myfile = DownloadFile(f)
-    response = HttpResponse(myfile, content_type='application/force-download')
-    response['Content-Disposition'] = 'attachment; filename=' + download_link.file_name
+    response = FileResponse(f)
     return response
 
 @csrf_exempt

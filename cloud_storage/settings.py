@@ -48,6 +48,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'storage.ranges_middleware.RangesMiddleware',
 ]
 
 ROOT_URLCONF = 'cloud_storage.urls'
