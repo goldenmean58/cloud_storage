@@ -16,8 +16,8 @@
 
 ```json
 {
-	'code': 0,
-	'msg': 'Register successfully'
+	"code": 0,
+	"msg": "Register successfully"
 }
 ```
 
@@ -37,8 +37,8 @@
 
 ```json
 {
-	'code': 0,
-	'msg': 'Login successfully'
+	"code": 0,
+	"msg": "Login successfully"
 }
 ```
 
@@ -52,8 +52,8 @@
 
 ```json
 {
-	'code': 0,
-	'msg': 'Logout successfully'
+	"code": 0,
+	"msg": "Logout successfully"
 }
 ```
 
@@ -116,8 +116,8 @@
 
 ```json
 {
-	'code': 0,
-	'link': xxx
+	"code": 0,
+	"link": xxx
 }
 ```
 
