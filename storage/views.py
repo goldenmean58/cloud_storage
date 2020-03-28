@@ -266,11 +266,7 @@ def delete(username, parent_id, id_itself, is_dir):
     dir_info = is_dir.first()
     files_inside = File.objects.filter(user_name=username, parent_id=dir_info.id)
     for file in files_inside:
-        if not delete(username, dir_info.id, file.id, False):
-            return False
-    dirs_inside = File.objects.filter(user_name=username, parent_id=dir_info.id)
-    for dir in dirs_inside:
-        if not delete(username, dir_info.id, dir.id, True):
+        if not delete(username, dir_info.id, file.id, file.is_dir):
             return False
     is_dir.delete()
     return True
@@ -297,7 +293,7 @@ def delete_view(request):
     is_dir = delete_file.first().is_dir
     delete_id = delete_file.first().id
     if not delete(request.user, parent_id, delete_id, is_dir):
-        return JsonResponse({'code': 30001, 'msg': 'Cannot delete that file or directory'})
+        return JsonResponse({'code': 30002, 'msg': 'Cannot delete that file or directory'})
     return JsonResponse({"code": 0, "msg": "Delete successfully"})
 
 
@@ -320,8 +316,6 @@ def share_view(request):
         return JsonResponse({'code': 30000, 'msg': 'No such a directory'})
     parent_id = parent.first().id
     parent_name = "" if current_dir == "/" else current_dir
-    print(parent_name+"/"+file_name)
-    print(parent_id)
     share = File.objects.filter(user_name=request.user, parent_id=parent_id, dir_name=parent_name + "/" + file_name)
     if not share:
         return JsonResponse({'code': 30001, 'msg': 'Cannot share that file or directory'})
