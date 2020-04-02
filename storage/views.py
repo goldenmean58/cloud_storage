@@ -178,9 +178,11 @@ def move_view(request):
     dir_name = dest_path[:dest_path.rfind('/')]
     dir_name = "/" if dir_name == "" else dir_name
     base_name = dest_path[dest_path.rfind('/')+1:]
+    if base_name == '':
+        return JsonResponse({'code': 30001, 'msg': 'Full path needed'})
     parent = File.objects.filter(user_name=user, dir_name=dir_name)
     if not parent:
-        return False
+        return JsonResponse({'code': 30000, 'msg': 'No such a file'})
     parent = parent.first()
     parent_id = parent.id
     has_file = File.objects.filter(user_name=user, file_name=base_name, parent_id=parent_id)
@@ -206,6 +208,8 @@ def copy(dest_user, src_user, dest, src):
     dir_name = dest[:dest.rfind('/')]
     dir_name = "/" if dir_name == "" else dir_name
     base_name = dest[dest.rfind('/')+1:]
+    if base_name == '':
+        return False
     parent = File.objects.filter(user_name=src_user, dir_name=dir_name)
     if not parent:
         return False
