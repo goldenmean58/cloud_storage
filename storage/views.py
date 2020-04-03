@@ -87,8 +87,8 @@ def view_view(request):
     create_dir(request.user, "", '')
     path = request.POST.get("path", None)
     user = str(request.POST.get("user", request.user))
-    key = request.POST.get("key", None) 
-    if not key and user != str(request.user):
+    key = request.POST.get("key", None)
+    if not (key or (user == str(request.user) and request.user.is_authenticated)):
         return JsonResponse({'code': 20000, 'msg': "Not authenticated user"})
     if user == str(request.user):
         return view(user, path)
