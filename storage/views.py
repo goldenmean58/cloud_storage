@@ -156,7 +156,7 @@ def download_view(request, link):
     download_link = download_link.first()
     file_path = 'files/' + download_link.md5 + download_link.blake2
     f = open(file_path, 'rb')
-    response = FileResponse(f)
+    response = FileResponse(f, as_attachment=True, filename=download_link.file_name)
     return response
 
 def move(user_name, dest_path, src_path):
