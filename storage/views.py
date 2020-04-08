@@ -159,6 +159,39 @@ def download_view(request, link):
     response = FileResponse(f)
     return response
 
+def move(user_name, dest_path, src_path):
+    src_file = File.objects.filter(user_name=user_name, dir_name=src_path)
+    if not src_file:
+        return 30001
+        return JsonResponse({'code': 30000, 'msg': 'No such a file'})
+    dir_name = dest_path[:dest_path.rfind('/')]
+    dir_name = "/" if dir_name == "" else dir_name
+    base_name = dest_path[dest_path.rfind('/')+1:]
+    if base_name == '':
+        return 30002
+    parent = File.objects.filter(user_name=user_name, dir_name=dir_name)
+    if not parent:
+        return 30003
+    if dest_path.startswith(src_path + "/"):
+        return 40001
+    parent = parent.first()
+    parent_id = parent.id
+    has_file = File.objects.filter(user_name=user_name, file_name=base_name, parent_id=parent_id)
+    suffix = "" if not has_file else "_" + str(timezone.now())
+    base_name += suffix
+    dest_path += suffix
+    src_file = src_file.first()
+    src_file.dir_name = dest_path
+    src_file.file_name = base_name
+    src_file.parent_id = parent_id
+    src_file.save()
+    if src_file.is_dir:
+        files_inside = File.objects.filter(user_name=user_name, parent_id=src_file.id)
+        for file in files_inside:
+            if move(user_name, dest_path + "/" + file.file_name, file.dir_name):
+                return 30003
+    return 0
+
 @csrf_exempt
 def move_view(request):
     if request.method != 'POST':
@@ -170,25 +203,18 @@ def move_view(request):
     create_dir(request.user, "", '')
     src_path = request.POST.get("src_path", None)
     dest_path = request.POST.get("dest_path", None)
+    msg = {}
+    msg[0] = 'Move successfully'
+    msg[30001] = 'No such a file'
+    msg[30002] = 'Full path needed'
+    msg[30003] = 'Failed to move the file'
+    msg[40001] = 'Destination directory is the subdirectory of the source directory'
+    if dest_path.startswith(src_path + "/"):
+        return JsonResponse({'code': 40001, 'msg': msg[40001]})
     if not src_path or not dest_path:
         return JsonResponse({'code': 30000, 'msg': 'Missing Parameters'})
-    src_file = File.objects.filter(user_name=request.user, dir_name=src_path)
-    if not src_file:
-        return JsonResponse({'code': 30000, 'msg': 'No such a file'})
-    dir_name = dest_path[:dest_path.rfind('/')]
-    dir_name = "/" if dir_name == "" else dir_name
-    base_name = dest_path[dest_path.rfind('/')+1:]
-    if base_name == '':
-        return JsonResponse({'code': 30001, 'msg': 'Full path needed'})
-    parent = File.objects.filter(user_name=user, dir_name=dir_name)
-    if not parent:
-        return JsonResponse({'code': 30000, 'msg': 'No such a file'})
-    parent = parent.first()
-    parent_id = parent.id
-    has_file = File.objects.filter(user_name=user, file_name=base_name, parent_id=parent_id)
-    suffix = "" if not has_file else "_" + str(timezone.now())
-    src_file.update(dir_name=dest_path, file_name=base_name + suffix, parent_id=parent_id)
-    return JsonResponse({'code': 0, 'msg': 'Move successfully'})
+    retcode = move(user, dest_path, src_path)
+    return JsonResponse({'code': retcode, 'msg': msg[retcode]})
 
 def add_file_record(user, file_name, file_size, md5, blake2s, parent_id, current_dir):
     file = File(file_name=file_name, file_size=file_size, md5=md5, blake2=blake2s, parent_id=parent_id, is_shared=False, shared_key='', user_name=user, is_dir=False, dir_name=current_dir + ("/" if current_dir != "/" else "") + file_name)
@@ -202,6 +228,8 @@ def add_file_record(user, file_name, file_size, md5, blake2s, parent_id, current
     
 
 def copy(dest_user, src_user, dest, src):
+    if dest_user == src_user and dest.startswith(src + "/"):
+        return False
     src_file = File.objects.filter(user_name=src_user, dir_name=src)
     if not src_file:
         return False
@@ -245,6 +273,8 @@ def copy_view(request):
     dest_path = request.POST.get("dest_path", None)
     if not src_path or not dest_path:
         return JsonResponse({'code': 30000, 'msg': 'Missing Parameters'})
+    if dest_path.startswith(src_path + "/"):
+        return JsonResponse({'code': 40001, 'msg': 'Destination directory is the subdirectory of the source directory'})
     if not copy(user, user, dest_path, src_path):
         return JsonResponse({'code': 40000, 'msg': 'Failed to copy'})
     return JsonResponse({'code': 0, 'msg': 'Copy successfully'})
