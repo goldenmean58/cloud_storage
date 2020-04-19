@@ -27,7 +27,7 @@ def create_dir(user_name, current_dir, dir_name):
     real_name = prefix + "/" + dir_name
     new_dir = File.objects.filter(user_name=user_name, dir_name=real_name, is_dir=True, file_name=dir_name)
     if not new_dir:
-        new_dir = File(dir_name=real_name, user_name=user_name, parent_id=parent_id, is_shared=False, is_dir=True, file_name=dir_name)
+        new_dir = File(dir_name=real_name, user_name=user_name, parent_id=parent_id, is_shared=False, is_dir=True, file_name=dir_name, last_dir_name="")
         new_dir.save()
     return real_name
 
@@ -181,6 +181,70 @@ def move(user_name, dest_path, src_path):
     base_name += suffix
     dest_path += suffix
     src_file = src_file.first()
+    src_file.last_dir_name = src_file.dir_name
+    src_file.dir_name = dest_path
+    src_file.file_name = base_name
+    src_file.parent_id = parent_id
+    src_file.save()
+    if src_file.is_dir:
+        files_inside = File.objects.filter(user_name=user_name, parent_id=src_file.id)
+        for file in files_inside:
+            if move(user_name, dest_path + "/" + file.file_name, file.dir_name):
+                return 30003
+    return 0
+
+@csrf_exempt
+def restore_view(request):
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+    if not request.user.is_authenticated:
+        return JsonResponse({'code': 20000, 'msg': "Not authenticated user"})
+    os.makedirs('files', exist_ok=True)
+    user = str(request.user)
+    create_dir(request.user, "", '')
+    create_dir(request.user, "/", '$recycle_bin$')
+    path = request.POST.get("path", None)
+    msg = {}
+    msg[0] = 'Move successfully'
+    msg[30001] = 'No such a file'
+    msg[30002] = 'Full path needed'
+    msg[30003] = 'Failed to move the file'
+    msg[40001] = 'Destination directory is the subdirectory of the source directory'
+    # if path.startswith(src_path + "/"):
+    #     return JsonResponse({'code': 40001, 'msg': msg[40001]})
+    if not path:
+        return JsonResponse({'code': 30000, 'msg': 'Missing Parameters'})
+    file = File.objects.filter(user_name=user, dir_name=path)
+    if not file:
+        return JsonResponse({'code': 30001, 'msg': msg[30001]})
+    file = file.first()
+    retcode = move(user, file.last_dir_name, path)
+    return JsonResponse({'code': retcode, 'msg': msg[retcode]})
+
+
+def move(user_name, dest_path, src_path):
+    src_file = File.objects.filter(user_name=user_name, dir_name=src_path)
+    if not src_file:
+        return 30001
+        return JsonResponse({'code': 30000, 'msg': 'No such a file'})
+    dir_name = dest_path[:dest_path.rfind('/')]
+    dir_name = "/" if dir_name == "" else dir_name
+    base_name = dest_path[dest_path.rfind('/')+1:]
+    if base_name == '':
+        return 30002
+    parent = File.objects.filter(user_name=user_name, dir_name=dir_name)
+    if not parent:
+        return 30003
+    if dest_path.startswith(src_path + "/"):
+        return 40001
+    parent = parent.first()
+    parent_id = parent.id
+    has_file = File.objects.filter(user_name=user_name, file_name=base_name, parent_id=parent_id)
+    suffix = "" if not has_file else "_" + str(timezone.now())
+    base_name += suffix
+    dest_path += suffix
+    src_file = src_file.first()
+    src_file.last_dir_name = src_file.dir_name
     src_file.dir_name = dest_path
     src_file.file_name = base_name
     src_file.parent_id = parent_id
@@ -201,6 +265,7 @@ def move_view(request):
     os.makedirs('files', exist_ok=True)
     user = str(request.user)
     create_dir(request.user, "", '')
+    create_dir(request.user, "/", '$recycle_bin$')
     src_path = request.POST.get("src_path", None)
     dest_path = request.POST.get("dest_path", None)
     msg = {}
@@ -238,7 +303,7 @@ def copy(dest_user, src_user, dest, src):
     base_name = dest[dest.rfind('/')+1:]
     if base_name == '':
         return False
-    parent = File.objects.filter(user_name=src_user, dir_name=dir_name)
+    parent = File.objects.filter(user_name=dest_user, dir_name=dir_name)
     if not parent:
         return False
     parent = parent.first()
@@ -247,7 +312,7 @@ def copy(dest_user, src_user, dest, src):
     file_size = src_file.file_size
     md5 = src_file.md5
     blake2 = src_file.blake2
-    has_file = File.objects.filter(user_name=dest_user, parent_id=parent.id, file_name=src_file.file_name)
+    has_file = File.objects.filter(user_name=dest_user, parent_id=parent.id, file_name=base_name)
     suffix = "" if not has_file else "_" + str(timezone.now())
     if not src_file.is_dir:
         add_file_record(dest_user, base_name + suffix, file_size, md5, blake2, parent.id, dir_name)
@@ -269,16 +334,22 @@ def copy_view(request):
     os.makedirs('files', exist_ok=True)
     user = str(request.user)
     create_dir(request.user, "", '')
-    src_path = request.POST.get("src_path", None)
+    key = request.POST.get("key", None)
+    dest_user = request.POST.get("dest_user", str(request.user))
     dest_path = request.POST.get("dest_path", None)
+    src_user = request.POST.get("src_user", str(request.user))
+    src_path = request.POST.get("src_path", None)
     if not src_path or not dest_path:
         return JsonResponse({'code': 30000, 'msg': 'Missing Parameters'})
     if dest_path.startswith(src_path + "/"):
         return JsonResponse({'code': 40001, 'msg': 'Destination directory is the subdirectory of the source directory'})
-    if not copy(user, user, dest_path, src_path):
-        return JsonResponse({'code': 40000, 'msg': 'Failed to copy'})
-    return JsonResponse({'code': 0, 'msg': 'Copy successfully'})
-
+    if not (key or (src_user == str(request.user) and request.user.is_authenticated)):
+        return JsonResponse({'code': 20000, 'msg': "Not authenticated user"})
+    if dest_user == str(request.user) and (src_user == str(request.user) or (key is not None and check_key(src_user, src_path, key))):
+        if not copy(dest_user, src_user, dest_path, src_path):
+            return JsonResponse({'code': 40000, 'msg': 'Failed to copy'})
+        return JsonResponse({'code': 0, 'msg': 'Copy successfully'})
+    return JsonResponse({'code': 40002, 'msg': 'Access denied'})
 
 def delete(username, parent_id, id_itself, is_dir):
     if not is_dir:
@@ -329,7 +400,6 @@ def delete_view(request):
     if not delete(request.user, parent_id, delete_id, is_dir):
         return JsonResponse({'code': 30002, 'msg': 'Cannot delete that file or directory'})
     return JsonResponse({"code": 0, "msg": "Delete successfully"})
-
 
 @csrf_exempt
 def share_view(request):

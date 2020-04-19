@@ -21,4 +21,5 @@ urlpatterns = (
     path("share", views.share_view, name='share_view'),
     path("unshare", views.unshare_view, name='unshare_view'),
     path("create_dir", views.create_dir_view, name='create_dir_view'),
+    path("restore", views.restore_view, name='restore_view'),
 )

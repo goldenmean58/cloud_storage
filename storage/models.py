@@ -5,7 +5,7 @@ from django.db import models
 class File(models.Model):
     id = models.AutoField(primary_key=True)
     is_dir = models.BooleanField()
-    dir_name = models.CharField(max_length=256, null=True, blank=True)
+    dir_name = models.CharField(max_length=65535, null=True, blank=True)
     file_name = models.CharField(max_length=256)
     file_size = models.BigIntegerField(null=True, blank=True)
     user_name = models.CharField(max_length=256)
@@ -16,6 +16,7 @@ class File(models.Model):
     shared_key = models.CharField(max_length=4, blank=True, null=True)
     shared_expire_time = models.DateTimeField(auto_now_add=True)
     upload_time = models.DateTimeField(auto_now_add=True)
+    last_dir_name = models.CharField(max_length=65535, null=True, blank=True)
 
 
 class DownloadLink(models.Model):

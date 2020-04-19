@@ -149,6 +149,18 @@
 
 `dest_path`: 目的绝对路径
 
+`/$recycle_bin$`是回收站的路径
+
+## 恢复文件/文件夹
+
+`method`: `POST`
+
+`path`: `/files/restore`
+
+`args`:
+
+`path`: 要恢复的文件/文件夹的绝对路径(通常是回收站中的文件/文件夹的绝对路径路径)
+
 ## 复制文件/文件夹
 
 `method`: `POST`
@@ -157,9 +169,15 @@
 
 `args`:
 
+`src_user`: 源用户
+
 `src_path`: 源绝对路径
 
+`dest_user`: 目标用户
+
 `dest_path`: 目的绝对路径
+
+`key`: 如果源用户与目标用户不一致则填写分享码，否则不需要填
 
 ## 分享
 
