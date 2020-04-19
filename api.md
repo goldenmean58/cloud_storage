@@ -206,3 +206,33 @@
 `current_dir`: 当前所在文件夹的绝对路径
 
 `file_name`: 文件/文件夹名
+
+## 获取总空间大小
+
+`method`: `POST`
+
+`path`: `/files/get_total_size`
+
+`Return value`:
+
+```json
+{
+    "code": 0,
+    "total_size": 1073741824 // 总可用字节(Byte)数
+}
+```
+
+## 获取已使用空间大小
+
+`method`: `POST`
+
+`path`: `/files/get_used_size`
+
+`Return value`:
+
+```json
+{
+    "code": 0,
+    "used_size": 0 // 已使用空间字节(Byte)数
+}
+```

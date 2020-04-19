@@ -3,6 +3,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.http import HttpResponseRedirect, HttpResponseNotAllowed, HttpResponseBadRequest, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from .models import UserInfo
 
 # Create your views here.
 @csrf_exempt
@@ -33,6 +34,8 @@ def register_view(request):
             return JsonResponse({"code": 30000 , "msg": "User has existen, failed to register "})
         user = User.objects.create_user(username=username, password=password)
         user.save()
+        user_info = UserInfo(total_size=102846, used_size=0, user_name=username) # 1G
+        user_info.save()
     return JsonResponse({"code": 0 , "msg": "Register successfully"})
 
 @csrf_exempt

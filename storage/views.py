@@ -7,6 +7,7 @@ from time import time
 import hashlib
 import os
 from .models import File, DownloadLink, RawFile
+from user_auth.models import UserInfo
 from django.utils import timezone
 import datetime
 from django.db.models import F
@@ -31,6 +32,44 @@ def create_dir(user_name, current_dir, dir_name):
         new_dir.save()
     return real_name
 
+def get_total_size(user_name):
+    user_info = UserInfo.objects.filter(user_name=user_name)
+    if not user_info:
+        return -1
+    user_info = user_info.first()
+    return user_info.total_size
+
+@csrf_exempt
+def get_total_size_view(request):
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+    if not request.user.is_authenticated:
+        return JsonResponse({'code': 20000, 'msg': "Not authenticated user"})
+    os.makedirs('files', exist_ok=True)
+    create_dir(request.user, "", '')
+    user = str(request.POST.get("user", request.user))
+    return JsonResponse({'code': 0, 'total_size': get_total_size(user)})
+
+
+def get_used_size(user_name):
+    user_info = UserInfo.objects.filter(user_name=user_name)
+    if not user_info:
+        return -1
+    user_info = user_info.first()
+    return user_info.used_size
+
+@csrf_exempt
+def get_used_size_view(request):
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+    if not request.user.is_authenticated:
+        return JsonResponse({'code': 20000, 'msg': "Not authenticated user"})
+    os.makedirs('files', exist_ok=True)
+    create_dir(request.user, "", '')
+    user = str(request.POST.get("user", request.user))
+    return JsonResponse({'code': 0, 'used_size': get_used_size(user)})
+
+
 # Create your views here.
 @csrf_exempt
 def upload_view(request):
@@ -47,6 +86,10 @@ def upload_view(request):
     parent_id = parent.first().id
     file_name = request.FILES['file'].name
     file_size = request.FILES['file'].size
+    total_size = get_total_size(request.user)
+    used_size = get_used_size(request.user)
+    if file_size + used_size > total_size:
+        return JsonResponse({'code': 30001, 'msg': 'No extra space for this file'})
     md5 = hashlib.md5()
     blake2s = hashlib.blake2s()
     tmp_real_name = 'files/' + file_name + str(int(time()))
@@ -282,14 +325,25 @@ def move_view(request):
     return JsonResponse({'code': retcode, 'msg': msg[retcode]})
 
 def add_file_record(user, file_name, file_size, md5, blake2s, parent_id, current_dir):
+    user_info = UserInfo.objects.filter(user_name=user)
+    if not user_info:
+        return False
+    user_info = user_info.first()
+    total_size = user_info.total_size
+    used_size = user_info.used_size
+    if file_size + used_size > total_size:
+        return False
     file = File(file_name=file_name, file_size=file_size, md5=md5, blake2=blake2s, parent_id=parent_id, is_shared=False, shared_key='', user_name=user, is_dir=False, dir_name=current_dir + ("/" if current_dir != "/" else "") + file_name)
     file.save()
+    user_info.used_size += file_size
+    user_info.save()
     raw_file = RawFile.objects.filter(md5=md5, blake2=blake2s)
     if not raw_file:
         raw_file = RawFile(md5=md5, blake2=blake2s, count=1)
         raw_file.save()
-        return
+        return True
     raw_file.update(count=F('count') + 1)
+    return True
     
 
 def copy(dest_user, src_user, dest, src):
@@ -315,8 +369,7 @@ def copy(dest_user, src_user, dest, src):
     has_file = File.objects.filter(user_name=dest_user, parent_id=parent.id, file_name=base_name)
     suffix = "" if not has_file else "_" + str(timezone.now())
     if not src_file.is_dir:
-        add_file_record(dest_user, base_name + suffix, file_size, md5, blake2, parent.id, dir_name)
-        return True
+        return add_file_record(dest_user, base_name + suffix, file_size, md5, blake2, parent.id, dir_name)
     created_dir_name = create_dir(dest_user, parent.dir_name, src_file.file_name + suffix)
     files_inside = File.objects.filter(user_name=src_user, parent_id=src_file.id)
     for file in files_inside:
@@ -365,6 +418,10 @@ def delete(username, parent_id, id_itself, is_dir):
             raw_file.delete()
         else:
             raw_file.update(count=F('count') - 1)
+        user_info = UserInfo.objects.filter(user_name=username)
+        if not user_info:
+            return False
+        user_info.update(used_size=F('used_size') - delete_file.file_size)
         is_file.delete()
         return True
     is_dir = File.objects.filter(user_name=username, id=id_itself)

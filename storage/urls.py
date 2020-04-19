@@ -22,4 +22,6 @@ urlpatterns = (
     path("unshare", views.unshare_view, name='unshare_view'),
     path("create_dir", views.create_dir_view, name='create_dir_view'),
     path("restore", views.restore_view, name='restore_view'),
+    path("get_total_size", views.get_total_size_view, name='get_total_size_view'),
+    path("get_used_size", views.get_used_size_view, name='get_used_size_view'),
 )

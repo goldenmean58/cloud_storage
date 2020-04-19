@@ -18,7 +18,6 @@ class File(models.Model):
     upload_time = models.DateTimeField(auto_now_add=True)
     last_dir_name = models.CharField(max_length=65535, null=True, blank=True)
 
-
 class DownloadLink(models.Model):
     md5 = models.CharField(max_length=32)
     blake2 = models.CharField(max_length=32)
