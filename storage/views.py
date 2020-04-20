@@ -173,8 +173,14 @@ def get_download_view(request):
         return HttpResponseNotAllowed(['POST'])
     # if not request.user.is_authenticated:
     #     return JsonResponse({'code': 20000, 'msg': "Not authenticated user"})
-    user = request.POST.get("user", None)
     path = request.POST.get("path", None)
+    user = None
+    if path == None:
+        return JsonResponse({'code': 30000, 'msg': 'No such a directory'})
+    else if not path.startswith('/'):
+        user = path[:path.find('/')]
+        path = path[path.find('/'):]
+    user = user if user is not None else str(request.POST.get("user", request.user))
     key = request.POST.get("key", "")
     if not user or not path:
         return JsonResponse({'code': 30000, 'msg': 'Missing Parameters'})
@@ -395,10 +401,22 @@ def copy_view(request):
     user = str(request.user)
     create_dir(request.user, "", '')
     key = request.POST.get("key", None)
-    dest_user = request.POST.get("dest_user", str(request.user))
     dest_path = request.POST.get("dest_path", None)
-    src_user = request.POST.get("src_user", str(request.user))
     src_path = request.POST.get("src_path", None)
+    src_user = None
+    if src_path == None:
+        return JsonResponse({'code': 30000, 'msg': 'No such a directory'})
+    else if not src_path.startswith('/'):
+        src_user = src_path[:src_path.find('/')]
+        src_path = src_path[src_path.find('/'):]
+    dest_user = None
+    if dest_path == None:
+        return JsonResponse({'code': 30000, 'msg': 'No such a directory'})
+    else if not dest_path.startswith('/'):
+        dest_user = dest_path[:dest_path.find('/')]
+        dest_path = dest_path[dest_path.find('/'):]
+    src_user = src_user if src_user is not None else str(request.POST.get("src_user", request.user))
+    dest_user = dest_user if dest_user is not None else str(request.POST.get("dest_user", request.user))
     if not src_path or not dest_path:
         return JsonResponse({'code': 30000, 'msg': 'Missing Parameters'})
     if dest_path.startswith(src_path + "/"):
