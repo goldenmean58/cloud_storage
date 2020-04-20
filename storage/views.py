@@ -489,7 +489,7 @@ def share_view(request):
     if not share:
         return JsonResponse({'code': 30001, 'msg': 'Cannot share that file or directory'})
     share.update(is_shared=True, shared_key=shared_key, shared_expire_time=timezone.now() + datetime.timedelta(days=share_day))
-    return JsonResponse({"code": 0, "msg": "Share successfully", "share_url": "view/" + str(request.user) + parent_name + "/" + file_name, "shared_key": shared_key})
+    return JsonResponse({"code": 0, "msg": "Share successfully", "share_url": str(request.user) + parent_name + "/" + file_name, "shared_key": shared_key})
 
 
 
