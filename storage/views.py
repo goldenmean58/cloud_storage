@@ -133,7 +133,7 @@ def view_view(request):
     user = None
     if path == None:
         return JsonResponse({'code': 30000, 'msg': 'No such a directory'})
-    else if not path.startswith('/'):
+    elif not path.startswith('/'):
         user = path[:path.find('/')]
         path = path[path.find('/'):]
     user = user if user is not None else str(request.POST.get("user", request.user))
@@ -177,7 +177,7 @@ def get_download_view(request):
     user = None
     if path == None:
         return JsonResponse({'code': 30000, 'msg': 'No such a directory'})
-    else if not path.startswith('/'):
+    elif not path.startswith('/'):
         user = path[:path.find('/')]
         path = path[path.find('/'):]
     user = user if user is not None else str(request.POST.get("user", request.user))
@@ -406,13 +406,13 @@ def copy_view(request):
     src_user = None
     if src_path == None:
         return JsonResponse({'code': 30000, 'msg': 'No such a directory'})
-    else if not src_path.startswith('/'):
+    elif not src_path.startswith('/'):
         src_user = src_path[:src_path.find('/')]
         src_path = src_path[src_path.find('/'):]
     dest_user = None
     if dest_path == None:
         return JsonResponse({'code': 30000, 'msg': 'No such a directory'})
-    else if not dest_path.startswith('/'):
+    elif not dest_path.startswith('/'):
         dest_user = dest_path[:dest_path.find('/')]
         dest_path = dest_path[dest_path.find('/'):]
     src_user = src_user if src_user is not None else str(request.POST.get("src_user", request.user))
