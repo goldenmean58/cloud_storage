@@ -130,7 +130,13 @@ def view_view(request):
     create_dir(request.user, "", '')
     create_dir(request.user, "/", '$recycle_bin$')
     path = request.POST.get("path", None)
-    user = str(request.POST.get("user", request.user))
+    user = None
+    if path == None:
+        return JsonResponse({'code': 30000, 'msg': 'No such a directory'})
+    else if not path.startswith('/'):
+        user = path[:path.find('/')]
+        path = path[path.find('/'):]
+    user = user if user is not None else str(request.POST.get("user", request.user))
     key = request.POST.get("key", None)
     if not (key or (user == str(request.user) and request.user.is_authenticated)):
         return JsonResponse({'code': 20000, 'msg': "Not authenticated user"})
