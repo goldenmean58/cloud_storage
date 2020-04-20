@@ -128,6 +128,7 @@ def view_view(request):
     #     return JsonResponse({'code': 20000, 'msg': "Not authenticated user"})
     os.makedirs('files', exist_ok=True)
     create_dir(request.user, "", '')
+    create_dir(request.user, "/", '$recycle_bin$')
     path = request.POST.get("path", None)
     user = str(request.POST.get("user", request.user))
     key = request.POST.get("key", None)
@@ -456,6 +457,7 @@ def delete_view(request):
     delete_id = delete_file.first().id
     if not delete(request.user, parent_id, delete_id, is_dir):
         return JsonResponse({'code': 30002, 'msg': 'Cannot delete that file or directory'})
+    create_dir(request.user, "/", '$recycle_bin$')
     return JsonResponse({"code": 0, "msg": "Delete successfully"})
 
 @csrf_exempt

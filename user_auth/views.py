@@ -34,7 +34,7 @@ def register_view(request):
             return JsonResponse({"code": 30000 , "msg": "User has existen, failed to register "})
         user = User.objects.create_user(username=username, password=password)
         user.save()
-        user_info = UserInfo(total_size=102846, used_size=0, user_name=username) # 1G
+        user_info = UserInfo(total_size=1024 * 1024 * 1024, used_size=0, user_name=username) # 1G
         user_info.save()
     return JsonResponse({"code": 0 , "msg": "Register successfully"})
 
