@@ -32,13 +32,6 @@ def create_dir(user_name, current_dir, dir_name):
         new_dir.save()
     return real_name
 
-def get_total_size(user_name):
-    user_info = UserInfo.objects.filter(user_name=user_name)
-    if not user_info:
-        return -1
-    user_info = user_info.first()
-    return user_info.total_size
-
 @csrf_exempt
 def get_total_size_view(request):
     if request.method != 'POST':
@@ -48,15 +41,7 @@ def get_total_size_view(request):
     os.makedirs('files', exist_ok=True)
     create_dir(request.user, "", '')
     user = str(request.POST.get("user", request.user))
-    return JsonResponse({'code': 0, 'total_size': get_total_size(user)})
-
-
-def get_used_size(user_name):
-    user_info = UserInfo.objects.filter(user_name=user_name)
-    if not user_info:
-        return -1
-    user_info = user_info.first()
-    return user_info.used_size
+    return JsonResponse({'code': 0, 'total_size': get_space_size(user)[0]})
 
 @csrf_exempt
 def get_used_size_view(request):
@@ -67,7 +52,26 @@ def get_used_size_view(request):
     os.makedirs('files', exist_ok=True)
     create_dir(request.user, "", '')
     user = str(request.POST.get("user", request.user))
-    return JsonResponse({'code': 0, 'used_size': get_used_size(user)})
+    return JsonResponse({'code': 0, 'used_size': get_space_size(user)[1]})
+
+def get_space_size(user_name):
+    user_info = UserInfo.objects.filter(user_name=user_name)
+    if not user_info:
+        return -1
+    user_info = user_info.first()
+    return [user_info.total_size, user_info.used_size]
+
+@csrf_exempt
+def get_space_size_view(request):
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+    if not request.user.is_authenticated:
+        return JsonResponse({'code': 20000, 'msg': "Not authenticated user"})
+    os.makedirs('files', exist_ok=True)
+    create_dir(request.user, "", '')
+    user = str(request.POST.get("user", request.user))
+    space_info = get_space_size(user)
+    return JsonResponse({'code': 0, 'total_size': space_info[0], 'used_size': space_info[1]})
 
 
 # Create your views here.

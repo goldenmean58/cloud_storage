@@ -236,3 +236,19 @@
     "used_size": 0 // 已使用空间字节(Byte)数
 }
 ```
+
+## 获取空间使用情况
+
+`method`: `POST`
+
+`path`: `/files/get_space_size`
+
+`Return value`:
+
+```json
+{
+    "code": 0,
+    "used_size": 0, // 已使用空间字节(Byte)数
+    "total_size": 1024 // 总可用字节
+}
+```

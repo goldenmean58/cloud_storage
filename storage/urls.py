@@ -24,4 +24,5 @@ urlpatterns = (
     path("restore", views.restore_view, name='restore_view'),
     path("get_total_size", views.get_total_size_view, name='get_total_size_view'),
     path("get_used_size", views.get_used_size_view, name='get_used_size_view'),
+    path("get_space_size", views.get_space_size_view, name='get_space_size_view'),
 )
