@@ -40,7 +40,7 @@ def get_total_size_view(request):
         return JsonResponse({'code': 20000, 'msg': "Not authenticated user"})
     os.makedirs('files', exist_ok=True)
     create_dir(request.user, "", '')
-    user = str(request.POST.get("user", request.user))
+    user = str(request.user)
     return JsonResponse({'code': 0, 'total_size': get_space_size(user)[0]})
 
 @csrf_exempt
@@ -51,7 +51,7 @@ def get_used_size_view(request):
         return JsonResponse({'code': 20000, 'msg': "Not authenticated user"})
     os.makedirs('files', exist_ok=True)
     create_dir(request.user, "", '')
-    user = str(request.POST.get("user", request.user))
+    user = str(request.user)
     return JsonResponse({'code': 0, 'used_size': get_space_size(user)[1]})
 
 def get_space_size(user_name):
@@ -69,12 +69,10 @@ def get_space_size_view(request):
         return JsonResponse({'code': 20000, 'msg': "Not authenticated user"})
     os.makedirs('files', exist_ok=True)
     create_dir(request.user, "", '')
-    user = str(request.POST.get("user", request.user))
+    user = str(request.user)
     space_info = get_space_size(user)
     return JsonResponse({'code': 0, 'total_size': space_info[0], 'used_size': space_info[1]})
 
-
-# Create your views here.
 @csrf_exempt
 def upload_view(request):
     if request.method != 'POST':
@@ -90,8 +88,7 @@ def upload_view(request):
     parent_id = parent.first().id
     file_name = request.FILES['file'].name
     file_size = request.FILES['file'].size
-    total_size = get_total_size(request.user)
-    used_size = get_used_size(request.user)
+    total_size, used_size = get_space_size(request.user)
     if file_size + used_size > total_size:
         return JsonResponse({'code': 30001, 'msg': 'No extra space for this file'})
     md5 = hashlib.md5()
