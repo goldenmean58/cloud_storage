@@ -212,8 +212,8 @@ def download_view(request, link):
         return HttpResponseNotFound()
     download_link = download_link.first()
     file_path = 'files/' + download_link.md5 + download_link.blake2
-    with open(file_path, 'rb') as f:
-        response = FileResponse(f, as_attachment=True, filename=download_link.file_name)
+    f = open(file_path, 'rb')
+    response = FileResponse(f, as_attachment=True, filename=download_link.file_name)
     return response
 
 def move(user_name, dest_path, src_path):
